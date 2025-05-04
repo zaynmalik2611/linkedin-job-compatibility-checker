@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import puppeteer from 'puppeteer';
 
-export async function GET() {
+export async function POST() {
   const browser = await puppeteer.launch({
     headless: 'new', // to avoid Chromium errors
     args: ['--no-sandbox', '--disable-setuid-sandbox'],

@@ -1,0 +1,31 @@
+version: '3.9'
+
+services:
+  ollama:
+    image: ollama/ollama:latest # official image
+    container_name: ollama
+    ports:
+      - '11434:11434' # Ollama HTTP API
+    volumes:
+      - ollama-data:/root/.ollama # keeps model cache
+    environment:
+      # change the model if you want to
+      - OLLAMA_MODELS=deepseek-r1:1.5b # auto‑pull on first start
+    # deploy: # uncomment if you have an NVIDIA GPU
+    # resources:
+    #   reservations:
+    #     devices:
+    #       - capabilities: [gpu]
+
+  web:
+    build: .
+    container_name: nextjs
+    ports:
+      - '3000:3000'
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+    depends_on:
+      - ollama
+
+volumes:
+  ollama-data:
