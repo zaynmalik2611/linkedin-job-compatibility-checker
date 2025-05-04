@@ -1,31 +1,57 @@
-version: '3.9'
+# docker‑compose.yml  –  drop straight into your project root
+# run with:  docker compose up -d --build
 
 services:
   ollama:
-    image: ollama/ollama:latest # official image
+    image: ollama/ollama:latest
     container_name: ollama
+    restart: unless-stopped
     ports:
-      - '11434:11434' # Ollama HTTP API
+      - '11434:11434' # expose API to host
     volumes:
-      - ollama-data:/root/.ollama # keeps model cache
-    environment:
-      # change the model if you want to
-      - OLLAMA_MODELS=deepseek-r1:1.5b # auto‑pull on first start
-    # deploy: # uncomment if you have an NVIDIA GPU
-    # resources:
-    #   reservations:
-    #     devices:
-    #       - capabilities: [gpu]
+      - ollama-data:/root/.ollama # keep model cache
+
+    # ── bootstrap: start daemon → wait → pull model ──
+    entrypoint: |
+      sh -e -c '
+        # 1) start Ollama daemon in background
+        ollama serve & pid=$!
+
+        # 2) wait until the API responds
+        until ollama list >/dev/null 2>&1; do
+          echo "⏳  waiting for Ollama daemon…"
+          sleep 1
+        done
+
+        # 3) pull the model if it isn’t cached
+        echo "⏬  pulling deepseek‑r1:1.5b (first run only)…"
+        ollama pull deepseek-r1:1.5b
+
+        echo "🚀  Ollama ready"
+        # 4) keep the daemon in foreground
+        wait $pid
+      '
+
+    # health = API answers; web waits on this
+    healthcheck:
+      test: ['CMD', 'ollama', 'list']
+      interval: 30s
+      timeout: 10s
+      retries: 10
 
   web:
     build: .
     container_name: nextjs
+    restart: unless-stopped
     ports:
       - '3000:3000'
     environment:
       - OLLAMA_URL=http://ollama:11434
     depends_on:
-      - ollama
+      ollama:
+        condition: service_healthy
+    # optional: for Puppeteer stability
+    shm_size: '1gb'
 
 volumes:
   ollama-data:

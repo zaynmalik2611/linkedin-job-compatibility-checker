@@ -4,6 +4,7 @@ import puppeteer from 'puppeteer';
 export async function POST() {
   const browser = await puppeteer.launch({
     headless: 'new', // to avoid Chromium errors
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
   try {
